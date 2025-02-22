@@ -92,3 +92,15 @@ def radix_sort(arr):
         counting_sort(arr, exp)
         exp *= 10
     return arr
+
+# Quick Sort
+def quick_sort(arr):
+    if len(arr) <= 1: # Base case
+        return arr
+    
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+
+    return quick_sort(left) + middle + quick_sort(right)
