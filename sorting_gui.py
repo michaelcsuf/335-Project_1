@@ -8,16 +8,16 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from SortAlgo import *  # Import sorting functions
 
 # INSTALLATION REQUIREMENTS:
-# 1. I needed a env for it to run idk about you so fyi
-# 2. we need numpy and matplotlib so here is the install
+# 1: I needed a env for it to run idk about you so fyi
+# 2; we need numpy and matplotlib so here is the install
 #    pip install matplotlib numpy
-# 3. Tkinter
+# 3: Tkinter
 #    sudo apt install python3-tk  (Linux)
 #    brew install python-tk       (Mac)
 
 
 root = tk.Tk()
-root.title("Sorting Algorithm Analyzer")
+root.title( "Sorting Algorithm Analyzer")
 root.geometry("900x700")
 
 # UI COMPONENTS 
