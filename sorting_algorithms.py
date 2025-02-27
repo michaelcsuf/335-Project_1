@@ -1,6 +1,5 @@
 
 
-
 # Bubble Sort Algorithm
 def bubble_sort(students):
     n = len(students)
@@ -9,6 +8,14 @@ def bubble_sort(students):
         for j in range(0, n - i - 1):
             if students[j][1] > students[j+1][1]:
                 students[j], students[j+1] = students[j+1], students[j]
+
+# Linear Search Algorithm
+def linear_search(L, T):
+    indexes = []
+    for index in range(len(L)):
+        if L[index] == T:
+            indexes.append(index)
+    return indexes
 
 # Insertion Sort Algorithm
 def insertion_sort(cards):
@@ -32,6 +39,7 @@ def selection_sort(books):
                 min_index = j
         books[i], books[min_index] = books[min_index], books[i]
 
+# Merge Sort Algorithm
 def merge_sort(flights):
     if len(flights) > 1:
         mid = len(flights) // 2 # Find the middle index
