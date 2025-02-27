@@ -2,36 +2,27 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import random
 import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from SortAlgo import *  # Import sorting functions
+import ast  # For safe evaluation of string to list
+from sorting_algorithms import *  # Import sorting functions
+from animations import *  # Import animation functions
 
-# INSTALLATION REQUIREMENTS:
-# 1: I needed a env for it to run idk about you so fyi
-# 2; we need numpy and matplotlib so here is the install
-#    pip install matplotlib numpy
-# 3: Tkinter
-#    sudo apt install python3-tk  (Linux)
-#    brew install python-tk       (Mac)
-
-
+# Initialize Tkinter
 root = tk.Tk()
-root.title( "Sorting Algorithm Analyzer")
+root.title("Sorting Algorithm Analyzer")
 root.geometry("900x700")
 
-# UI COMPONENTS 
+# UI COMPONENTS
 
-# Unsorted data selec
+# Unsorted data selection
 frame_data = tk.LabelFrame(root, text="Unsorted Data", padx=10, pady=10)
 frame_data.pack(pady=10, fill="x", padx=20)
 
 array_display = tk.Entry(frame_data, width=60)
 array_display.pack(pady=5, padx=10)
 
-# randomizer settingss
-
-frame_randomizer = tk.LabelFrame(root,  text="Randomizer Settings", padx=10, pady=10)
+# Randomizer settings
+frame_randomizer = tk.LabelFrame(root, text="Randomizer Settings", padx=10, pady=10)
 frame_randomizer.pack(pady=10, fill="x", padx=20)
 
 tk.Label(frame_randomizer, text="Min Value").pack(side="left")
@@ -49,7 +40,7 @@ num_elements_entry = tk.Entry(frame_randomizer, width=5)
 num_elements_entry.pack(side="left", padx=5)
 num_elements_entry.insert(0, "30")
 
-# gen a random List
+# Generate a random list
 def generate_list():
     try:
         min_val = int(min_value_entry.get())
@@ -60,6 +51,10 @@ def generate_list():
         random_list = [random.randint(min_val, max_val) for _ in range(num_elements)]
         array_display.delete(0, tk.END)
         array_display.insert(0, str(random_list))
+        # Display the unsorted array visually
+        ax.clear()
+        ax.bar(range(len(random_list)), random_list, color="blue")
+        canvas.draw()
     except ValueError as e:
         messagebox.showerror("Input Error", f"Please enter valid numbers!\n{e}")
 
@@ -82,6 +77,110 @@ selected_algorithm = tk.StringVar(value="Bubble Sort")
 for alg in sorting_algorithms.keys():
     ttk.Radiobutton(frame_algorithms, text=alg, variable=selected_algorithm, value=alg).pack(side="left", padx=5)
 
+# Add a search entry and button
+frame_search = tk.LabelFrame(root, text="Linear Search", padx=10, pady=10)
+frame_search.pack(pady=10, fill="x", padx=20)
+
+tk.Label(frame_search, text="Search Value").pack(side="left")
+search_entry = tk.Entry(frame_search, width=10)
+search_entry.pack(side="left", padx=5)
+
+# Linear Search Functionality
+def linear_search_visualization():
+    try:
+        array_str = array_display.get()
+        array = ast.literal_eval(array_str)  # Safely convert string to list
+        if not isinstance(array, list):
+            raise ValueError("Invalid list format!")
+
+        search_value = int(search_entry.get())  # Get the value to search for
+
+        # Store search steps for visualization
+        search_steps = []
+
+        def capture_step(index, is_match):
+            search_steps.append((index, is_match))  # Save step (index, is_match)
+
+        # Perform Linear Search
+        found_index = linear_search_anim(array, search_value, capture_step)
+
+        # Set up the bar chart
+        ax.clear()
+        bars = ax.bar(range(len(array)), array, color="blue")
+
+        def update(frame):
+            index, is_match = search_steps[frame]
+            for bar, height in zip(bars, array):
+                bar.set_color("blue")  # Reset color
+            if is_match:
+                bars[index].set_color("green")  # Highlight match
+            else:
+                bars[index].set_color("red")  # Highlight current element
+
+        anim = FuncAnimation(fig, update, frames=len(search_steps), interval=500, repeat=False)
+        canvas.draw()
+
+        if found_index != -1:
+            messagebox.showinfo("Search Result", f"Value {search_value} found at index {found_index}.")
+        else:
+            messagebox.showinfo("Search Result", f"Value {search_value} not found.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+tk.Button(frame_search, text="Run Linear Search", command=linear_search_visualization).pack(side="left", padx=5)
+
+def animate_sorting():
+    try:
+        array_str = array_display.get()
+        array = ast.literal_eval(array_str)  # Safely convert string to list
+        if not isinstance(array, list):
+            raise ValueError("Invalid list format!")
+
+        algorithm_name = selected_algorithm.get()
+        sorting_function = sorting_algorithms[algorithm_name]
+
+        # Store sorting steps for animation
+        sorting_steps = []
+
+        def capture_step(arr):
+            sorting_steps.append(list(arr))  # Save the current state
+
+        # Capture the initial state of the array
+        capture_step(array)
+
+        # Call the corresponding animation function
+        sorting_map = {
+            "Bubble Sort": bubble_sort_anim,
+            "Insertion Sort": insertion_sort_anim,
+            "Selection Sort": selection_sort_anim,
+            "Merge Sort": merge_sort_anim,
+            "Quick Sort": quick_sort_anim,
+            "Radix Sort": radix_sort_anim
+        }
+
+        if algorithm_name in sorting_map:
+            sorting_map[algorithm_name](array, capture_step)
+        else:
+            messagebox.showerror("Sorting Error", "Animation not available for this algorithm.")
+            return
+
+        # Set up the bar chart
+        ax.clear()
+        bars = ax.bar(range(len(array)), array, color="blue")
+
+        def update(frame):
+            for bar, height in zip(bars, sorting_steps[frame]):
+                bar.set_height(height)
+
+        anim = FuncAnimation(fig, update, frames=len(sorting_steps), interval=100, repeat=False)
+        canvas.draw()
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+
+# Run sorting button
+tk.Button(root, text="Run Animation", command=animate_sorting, font=("Arial", 12, "bold")).pack(pady=20)
+
 # Sorting Visualization Frame
 frame_visual = tk.LabelFrame(root, text="Sorting Visualization", padx=10, pady=10)
 frame_visual.pack(pady=10, fill="both", expand=True, padx=20)
@@ -91,81 +190,6 @@ canvas = FigureCanvasTkAgg(fig, master=frame_visual)
 canvas.get_tk_widget().pack(fill="both", expand=True)
 
 # Animation Function
-def animate_sorting():
-    try:
-        array_str = array_display.get() 
-        array = eval(array_str)  # Convert string to list (Make sure input is safe)
-        if not isinstance(array, list):
-            raise ValueError("Invalid list format!")
 
-        algorithm_name = selected_algorithm.get()
-        sorting_function = sorting_algorithms[algorithm_name]
-
-        # Store sorting steps for animation
-        sorting_steps = []
-        
-        def capture_step(arr):
-            sorting_steps.append(list(arr))  # Save the current state
-
-        # Modified sorting functions to capture each step
-        def bubble_sort_anim(arr ):
-            n = len(arr)
-            for i in range(n):
-                for j in range(n - i-1):
-                    if arr[j] > arr[j + 1]:
-                        arr[j], arr[j +1] = arr[ j + 1], arr[j]
-                        capture_step(arr)
-
-        def insertion_sort_anim(arr):
-            for i in range(1, len(arr)):
-                key = arr[i]
-                j = i - 1
-                while j >= 0 and key < arr[j]:
-                    arr[j + 1] = arr[j]
-                    j -= 1
-                    capture_step(arr)
-                arr[j + 1] = key
-                capture_step(arr)
-
-        def selection_sort_anim(arr):
-            n = len(arr)
-            for i in range( n):
-                min_index = i
-                for j in range(i + 1, n ):
-                    if arr[j] < arr[min_index]:
-                        min_index = j
-                arr[i], arr[min_index] = arr[min_index], arr[i]
-                capture_step(arr)
-
-        # Call the corresponding animation function
-        sorting_map = {
-            "Bubble Sort": bubble_sort_anim,
-            "Insertion Sort": insertion_sort_anim,
-            "Selection Sort": selection_sort_anim
-        }
-
-        if algorithm_name in sorting_map:
-            sorting_map[algorithm_name](array )
-        else:
-            messagebox.showerror( "Sorting Error", "Animation not available for this algorithm.")
-            return
-
-        # Set up the bar chart
-        ax.clear()
-        bars = ax.bar(range(len(array) ), array, color="blue")
-
-        def update(frame):
-            for bar, height in zip(bars, sorting_steps[frame]):
-                bar.set_height(height)
-
-        anim = FuncAnimation(fig, update, frames=len(sorting_steps), interval=100, repeat=False)
-        canvas.draw()
-    
-    except Exception as e: 
-        messagebox.showerror("Error", f"An error occurred: {e}")
-
-# run a sorting button
-tk.Button(root, text="Run Animation", command=animate_sorting, font=("Arial", 12, "bold")).pack(pady=20)
-
-# Run tkinter on the main loop
+# Run Tkinter main loop
 root.mainloop()
