@@ -3,7 +3,8 @@
 ## Algorithm Implementation:
 Implement five sorting algorithms in Python:
 -  Bubble Sort,
-- Merge Sort, 
+- Merge Sort,
+- Selection Sort,
 - Quick Sort,
 - Radix Sort
 - Linear Search Algorithm.
@@ -20,11 +21,4 @@ complexity of each algorithm.
 - randomizer settings input with: Min value (input), Max value (input), Num of elements(input) then generate button 
 
 - anaylzer type run time ( be able to anaylze run time)
-
-- Algorithmn included: 
-    - Bubble Sort,
-    - Merge Sort,
-    - Quick Sort,
-    - Radix Sort
-    - Linear Search Algorithm.
 
