@@ -288,7 +288,144 @@ def display_performance_results(sizes, sort_results, search_results):
         ttk.Label(complexity_frame, text=complexity[2]).grid(row=row, column=3, padx=10, pady=5)
         ttk.Label(complexity_frame, text=complexity[3]).grid(row=row, column=4, padx=10, pady=5)
         row += 1
-    # Create a new window for results
+   
+# bar graph for sorting algorithms 
+
+# Add this function after your display_performance_results function
+def show_performance_bar_graph():
+    try:
+        # Get test data parameters
+        min_val = int(min_value_entry.get())
+        max_val = int(max_value_entry.get())
+        
+        # Use a single size for bar graph comparison
+        size = 1000  # A moderate size to compare algorithms
+        
+        # Collect results for each algorithm
+        results = {}
+        
+        # Generate test array used for all algorithms
+        test_array = [random.randint(min_val, max_val) for _ in range(size)]
+        
+        # Test sorting algorithms
+        for alg_name, sort_func in sorting_algorithms.items():
+            if alg_name == "Linear Search":
+                continue
+                
+            # Create a copy to avoid modifying the original
+            array_copy = test_array.copy()
+            
+            # Run the algorithm multiple times to get a more stable measurement
+            total_time = 0
+            runs = 3
+            
+            for _ in range(runs):
+                array_test = array_copy.copy()
+                
+                # Start timing
+                start_time = time.time()
+                
+                # Run the sort without visualization
+                def dummy_capture(arr):
+                    pass
+                
+                sort_func(array_test, dummy_capture)
+                
+                # End timing
+                end_time = time.time()
+                total_time += (end_time - start_time)
+            
+            # Average runtime
+            results[alg_name] = total_time / runs
+        
+        # Test Linear Search (average case)
+        search_array = test_array.copy()
+        middle_idx = len(search_array) // 2
+        target = search_array[middle_idx]
+        
+        # Run search multiple times
+        total_time = 0
+        runs = 10  # More runs for search since it's faster
+        
+        for _ in range(runs):
+            # Start timing
+            start_time = time.time()
+            
+            def dummy_search_capture(index, is_match):
+                pass
+                
+            linear_search(search_array, target, dummy_search_capture)
+            
+            # End timing
+            end_time = time.time()
+            total_time += (end_time - start_time)
+        
+        results["Linear Search"] = total_time / runs
+        
+        # Create a new window for the bar graph
+        bar_window = tk.Toplevel(root)
+        bar_window.title("Algorithm Performance Comparison")
+        bar_window.geometry("800x600")
+        
+        # Create the figure and axis
+        bar_fig, bar_ax = plt.subplots(figsize=(10, 6))
+        
+        # Create the bar chart
+        algorithms = list(results.keys())
+        runtimes = [results[alg] for alg in algorithms]
+        
+        # Sort algorithms by runtime for better visualization
+        sorted_indices = sorted(range(len(runtimes)), key=lambda i: runtimes[i])
+        algorithms = [algorithms[i] for i in sorted_indices]
+        runtimes = [runtimes[i] for i in sorted_indices]
+        
+        # Use different colors for different algorithm types
+        colors = []
+        for alg in algorithms:
+            if alg == "Linear Search":
+                colors.append('green')
+            elif "Sort" in alg and alg in ["Merge Sort", "Quick Sort", "Radix Sort"]:
+                colors.append('orange')  # Efficient sorts
+            else:
+                colors.append('blue')    # Simple sorts
+        
+        # Create the bars
+        bars = bar_ax.bar(algorithms, runtimes, color=colors)
+        
+        # Add data labels on top of bars
+        for bar in bars:
+            height = bar.get_height()
+            bar_ax.text(bar.get_x() + bar.get_width()/2., height + 0.0001,
+                        f'{height:.6f}s',
+                        ha='center', va='bottom', rotation=45, fontsize=8)
+        
+        # Add labels and title
+        bar_ax.set_xlabel('Algorithm', fontweight='bold')
+        bar_ax.set_ylabel('Runtime (seconds)', fontweight='bold')
+        bar_ax.set_title(f'Algorithm Runtime Comparison (Array Size = {size})', 
+                         fontsize=14, fontweight='bold')
+        
+        # Rotate x-axis labels for better readability
+        plt.xticks(rotation=45, ha='right')
+        
+        # Adjust layout
+        plt.tight_layout()
+        
+        # Add the plot to the window
+        canvas = FigureCanvasTkAgg(bar_fig, master=bar_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Add a label explaining the colors
+        explanation = ttk.Label(bar_window, 
+                               text="Colors: Blue = Simple Sorts, Orange = Efficient Sorts, Green = Search",
+                               font=('Arial', 10))
+        explanation.pack(pady=10)
+        
+    except Exception as e:
+        messagebox.showerror("Analysis Error", f"An error occurred generating bar graph: {e}")
+
+    
     perf_window = tk.Toplevel(root)
     perf_window.title("Algorithm Performance Analysis")
     perf_window.geometry("900x700")
@@ -446,6 +583,11 @@ performance_button = tk.Button(root, text="Analyze Algorithm",
                               font=("Arial", 12))
 performance_button.pack(pady=10)
 
+# button for bar graph visualization 
+bar_graph_button = tk.Button(root, text="Show Performance Bar Graph", 
+                            command=show_performance_bar_graph,
+                            font=("Arial", 12))
+bar_graph_button.pack(pady=10)
 # Sorting Visualization frame
 frame_visual = tk.LabelFrame(root, text="Sorting Visualization of Array 1", padx=10, pady=10)
 frame_visual.pack(pady=10, fill="both", expand=True, padx=20)
