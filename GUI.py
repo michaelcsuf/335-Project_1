@@ -137,10 +137,230 @@ def animate_sorting():
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
+# function to test performance analysis 
+def analyze_performance():
+    try:
+        # Get test data parameters
+        min_val = int(min_value_entry.get())
+        max_val = int(max_value_entry.get())
+        
+        # Test sizes - small, medium, large
+        test_sizes = [10, 100, 1000, 5000, 10000]
+        
+        # Separate results for sorting and searching
+        sort_results = {alg: [] for alg in sorting_algorithms.keys() if alg != "Linear Search"}
+        search_results = {"Linear Search (Best)": [], "Linear Search (Average)": [], "Linear Search (Worst)": []}
+        
+        # Run tests for each algorithm and size
+        for size in test_sizes:
+            # Generate test arrays used for all algorithms
+            test_array = [random.randint(min_val, max_val) for _ in range(size)]
+            
+            # Test sorting algorithms
+            for alg_name, sort_func in sorting_algorithms.items():
+                if alg_name == "Linear Search":
+                    continue
+                    
+                # Create a copy to avoid modifying the original
+                array_copy = test_array.copy()
+                
+                # Start timing
+                start_time = time.time()
+                
+                # Run the sort (without visualization to measure pure algorithm speed)
+                def dummy_capture(arr):
+                    pass  # Do nothing capture function to avoid visualization overhead
+                    
+                sort_func(array_copy, dummy_capture)
+                
+                # End timing
+                end_time = time.time()
+                runtime = end_time - start_time
+                
+                # Store results
+                sort_results[alg_name].append(runtime)
+            
+            # Testing Linear Search - Best Case (first element)
+            search_array = test_array.copy()
+            target = search_array[0]  # First element (best case)
+            
+            start_time = time.time()
+            def dummy_search_capture(index, is_match):
+                pass
+            linear_search(search_array, target, dummy_search_capture)
+            end_time = time.time()
+            search_results["Linear Search (Best)"].append(end_time - start_time)
+            
+            # Testing Linear Search - Average Case (middle element)
+            middle_idx = len(search_array) // 2
+            target = search_array[middle_idx] if middle_idx < len(search_array) else search_array[0]
+            
+            start_time = time.time()
+            linear_search(search_array, target, dummy_search_capture)
+            end_time = time.time()
+            search_results["Linear Search (Average)"].append(end_time - start_time)
+            
+            # Testing Linear Search - Worst Case (element not in array)
+            target = max_val + 1  # Value not in array
+            
+            start_time = time.time()
+            linear_search(search_array, target, dummy_search_capture)
+            end_time = time.time()
+            search_results["Linear Search (Worst)"].append(end_time - start_time)
+                
+        # Display results in a new window
+        display_performance_results(test_sizes, sort_results, search_results)
+        
+    except Exception as e:
+        messagebox.showerror("Analysis Error", f"An error occurred during performance analysis: {e}")
+
+# Function to display performance results
+def display_performance_results(sizes, sort_results, search_results):
+    # Create a new window for results
+    perf_window = tk.Toplevel(root)
+    perf_window.title("Algorithm Performance Analysis")
+    perf_window.geometry("900x700")
+    
+    # Create a notebook with tabs
+    notebook = ttk.Notebook(perf_window)
+    notebook.pack(fill='both', expand=True, padx=10, pady=10)
+    
+    # Runtime tab - Combined for both sorting and searching
+    runtime_tab = ttk.Frame(notebook)
+    notebook.add(runtime_tab, text="Runtime Analysis")
+    
+    # Create runtime chart
+    runtime_fig, runtime_ax = plt.subplots(figsize=(8, 5))
+    
+    # Plot runtime for each sorting algorithm
+    for alg_name, runtimes in sort_results.items():
+        runtime_ax.plot(sizes, runtimes, marker='o', label=alg_name)
+    
+    # Include Linear Search data in the same chart
+    for case_name, runtimes in search_results.items():
+        runtime_ax.plot(sizes, runtimes, marker='s', label=case_name, linestyle='--')
+    
+    runtime_ax.set_xlabel('Array Size', fontweight='bold')
+    runtime_ax.set_ylabel('Runtime (seconds)', fontweight='bold')
+    runtime_ax.set_title('Algorithm Runtime Comparison', fontsize=14, fontweight='bold')
+    runtime_ax.legend()
+    runtime_ax.grid(True)
+    
+    # Log scale for better visibility of differences
+    runtime_ax.set_xscale('log')
+    runtime_ax.set_yscale('log')
+    
+    runtime_canvas = FigureCanvasTkAgg(runtime_fig, master=runtime_tab)
+    runtime_canvas.get_tk_widget().pack(fill='both', expand=True)
+    
+    # Theoretical complexity tab
+    complexity_tab = ttk.Frame(notebook)
+    notebook.add(complexity_tab, text="Theoretical Complexity")
+    
+    # Create a table for theoretical complexities
+    complexity_frame = ttk.Frame(complexity_tab)
+    complexity_frame.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Headers
+    ttk.Label(complexity_frame, text="Algorithm", font=('Arial', 12, 'bold')).grid(row=0, column=0, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Best Case", font=('Arial', 12, 'bold')).grid(row=0, column=1, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Average Case", font=('Arial', 12, 'bold')).grid(row=0, column=2, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Worst Case", font=('Arial', 12, 'bold')).grid(row=0, column=3, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Space", font=('Arial', 12, 'bold')).grid(row=0, column=4, padx=10, pady=5)
+    
+    # Algorithm complexities
+    complexities = {
+        "Bubble Sort": ["O(n)", "O(n²)", "O(n²)", "O(1)"],
+        "Insertion Sort": ["O(n)", "O(n²)", "O(n²)", "O(1)"],
+        "Selection Sort": ["O(n²)", "O(n²)", "O(n²)", "O(1)"],
+        "Merge Sort": ["O(n log n)", "O(n log n)", "O(n log n)", "O(n)"],
+        "Quick Sort": ["O(n log n)", "O(n log n)", "O(n²)", "O(log n)"],
+        "Radix Sort": ["O(nk)", "O(nk)", "O(nk)", "O(n+k)"],
+        "Linear Search": ["O(1)", "O(n/2)", "O(n)", "O(1)"]
+    }
+    
+    # Fill the table
+    row = 1
+    for alg_name, complexity in complexities.items():
+        ttk.Label(complexity_frame, text=alg_name).grid(row=row, column=0, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[0]).grid(row=row, column=1, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[1]).grid(row=row, column=2, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[2]).grid(row=row, column=3, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[3]).grid(row=row, column=4, padx=10, pady=5)
+        row += 1
+    # Create a new window for results
+    perf_window = tk.Toplevel(root)
+    perf_window.title("Algorithm Performance Analysis")
+    perf_window.geometry("900x700")
+    
+    # Create a notebook with tabs
+    notebook = ttk.Notebook(perf_window)
+    notebook.pack(fill='both', expand=True, padx=10, pady=10)
+    
+    # Runtime tab
+    runtime_tab = ttk.Frame(notebook)
+    notebook.add(runtime_tab, text="Runtime Analysis")
+    
+    # Create runtime chart
+    runtime_fig, runtime_ax = plt.subplots(figsize=(8, 5))
+    
+    # Plot runtime for each algorithm
+    for alg_name, runtimes in sort_results.items():
+        runtime_ax.plot(sizes, runtimes, marker='o', label=alg_name)
+    
+    runtime_ax.set_xlabel('Array Size')
+    runtime_ax.set_ylabel('Runtime (seconds)')
+    runtime_ax.set_title('Algorithm Runtime Comparison')
+    runtime_ax.legend()
+    runtime_ax.grid(True)
+    
+    # Log scale for better visibility of differences
+    runtime_ax.set_xscale('log')
+    runtime_ax.set_yscale('log')
+    
+    runtime_canvas = FigureCanvasTkAgg(runtime_fig, master=runtime_tab)
+    runtime_canvas.get_tk_widget().pack(fill='both', expand=True)
+    
+    # Theoretical complexity tab
+    complexity_tab = ttk.Frame(notebook)
+    notebook.add(complexity_tab, text="Theoretical Complexity")
+    
+    # Create a table for theoretical complexities
+    complexity_frame = ttk.Frame(complexity_tab)
+    complexity_frame.pack(fill='both', expand=True, padx=20, pady=20)
+    
+    # Headers
+    ttk.Label(complexity_frame, text="Algorithm", font=('Arial', 12, 'bold')).grid(row=0, column=0, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Best Case", font=('Arial', 12, 'bold')).grid(row=0, column=1, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Average Case", font=('Arial', 12, 'bold')).grid(row=0, column=2, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Worst Case", font=('Arial', 12, 'bold')).grid(row=0, column=3, padx=10, pady=5)
+    ttk.Label(complexity_frame, text="Space", font=('Arial', 12, 'bold')).grid(row=0, column=4, padx=10, pady=5)
+    
+    # Algorithm complexities
+    complexities = {
+        "Bubble Sort": ["O(n)", "O(n²)", "O(n²)", "O(1)"],
+        "Insertion Sort": ["O(n)", "O(n²)", "O(n²)", "O(1)"],
+        "Selection Sort": ["O(n²)", "O(n²)", "O(n²)", "O(1)"],
+        "Merge Sort": ["O(n log n)", "O(n log n)", "O(n log n)", "O(n)"],
+        "Quick Sort": ["O(n log n)", "O(n log n)", "O(n²)", "O(log n)"],
+        "Radix Sort": ["O(nk)", "O(nk)", "O(nk)", "O(n+k)"],
+    }
+    
+    # Fill the table
+    row = 1
+    for alg_name, complexity in complexities.items():
+        ttk.Label(complexity_frame, text=alg_name).grid(row=row, column=0, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[0]).grid(row=row, column=1, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[1]).grid(row=row, column=2, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[2]).grid(row=row, column=3, padx=10, pady=5)
+        ttk.Label(complexity_frame, text=complexity[3]).grid(row=row, column=4, padx=10, pady=5)
+        row += 1
+
 # Function to handle window closing
 def on_closing():
     root.quit()
     root.destroy()
+
 
 # Initialize Tkinter
 root = tk.Tk()
@@ -219,6 +439,12 @@ search_entry.pack(side="left", padx=5)
 
 # Button to execute the selected algorithm
 tk.Button(root, text="Execute Algorithm", command=animate_sorting, font=("Arial", 12, "bold")).pack(pady=20)
+
+# Button to analyze performance
+performance_button = tk.Button(root, text="Analyze Algorithm", 
+                              command=analyze_performance,
+                              font=("Arial", 12))
+performance_button.pack(pady=10)
 
 # Sorting Visualization frame
 frame_visual = tk.LabelFrame(root, text="Sorting Visualization of Array 1", padx=10, pady=10)
