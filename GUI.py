@@ -10,6 +10,11 @@ import random
 
 from SortAlgo import *
 
+current_animation = None
+is_paused = False
+original_arrays = None
+current_frame = 0
+
 # Function to generate a random list of arrays
 def generate_list():
     global arrays
@@ -49,11 +54,17 @@ def generate_list():
 # Function to animate the sorting process
 def animate_sorting():
     try:
-        global arrays
+        global arrays, current_animation, original_arrays, is_paused
         if not arrays or len(arrays) == 0:
             messagebox.showerror("Input Error", "Please generate arrays first.")
             return
 
+        # Store original arrays for reset functionality
+        original_arrays = [arr.copy() for arr in arrays]
+        
+        # Reset pause state
+        is_paused = False
+        
         # Get the selected algorithm
         algorithm_name = selected_algorithm.get()
         sorting_function = sorting_algorithms[algorithm_name]
@@ -71,7 +82,6 @@ def animate_sorting():
                 sorting_steps.append(list(arr))
 
             def capture_search_step(index, is_match):
-                print(f"Captured step: index={index}, is_match={is_match}")
                 sorting_steps.append((index, is_match))
 
             capture_step(array_copy)
@@ -97,14 +107,39 @@ def animate_sorting():
         ax.clear()
         bars = ax.bar(range(len(arrays[0])), arrays[0], color="blue")
 
-        # Update function for sorting animation
+        # Update function for sorting animation with red highlights
         def update_sorting(frame):
+            global current_frame 
+            current_frame = frame
+            
+            # Reset all bars to blue first
+            for bar in bars:
+                bar.set_color("blue")
+            
+            # Check which bars have changed since last frame
+            if frame > 0:  # Not the first frame
+                current_values = all_sorting_steps[0][frame]
+                previous_values = all_sorting_steps[0][frame-1]
+                
+                # Find changed indices
+                for i, (curr, prev) in enumerate(zip(current_values, previous_values)):
+                    if curr != prev:
+                        # This bar has changed - highlight it in red
+                        bars[i].set_color("red")
+            
+            # Update heights of all bars
             for bar, height in zip(bars, all_sorting_steps[0][frame]):
                 bar.set_height(height)
+            
+            # Update progress label
+            progress_label.config(text=f"Step {frame+1}/{len(all_sorting_steps[0])}")
+            # Enable reset button once animation starts
+            reset_button.config(state="normal")
 
         # Update function for search animation
         def update_search(frame):
-            print(f"Updating search: frame={frame}, data={all_sorting_steps[0][frame]}")
+            global current_frame
+            current_frame = frame
             index, is_match = all_sorting_steps[0][frame]
             for bar in bars:
                 bar.set_color("blue")
@@ -113,12 +148,20 @@ def animate_sorting():
             else:
                 bars[index].set_color("red")
 
+            progress_label.config(text=f"Step {frame+1}/{len(all_sorting_steps[0])}")
+            # Enable reset button once animation starts
+            reset_button.config(state="normal")
+            
         # Create animation based on the selected algorithm
         if algorithm_name == "Linear Search":
-            anim = FuncAnimation(fig, update_search, frames=len(all_sorting_steps[0]), interval=500, repeat=False)
+            current_animation = FuncAnimation(fig, update_search, frames=len(all_sorting_steps[0]), interval=500, repeat=False)
         else:
-            anim = FuncAnimation(fig, update_sorting, frames=len(all_sorting_steps[0]), interval=100, repeat=False)
+            current_animation = FuncAnimation(fig, update_sorting, frames=len(all_sorting_steps[0]), interval=100, repeat=False)
 
+        # Enable the control buttons
+        pause_button.config(state="normal", text="Pause")
+        reset_button.config(state="normal")
+        
         canvas.draw()
 
         # Display search results if Linear Search was used
@@ -289,9 +332,7 @@ def display_performance_results(sizes, sort_results, search_results):
         ttk.Label(complexity_frame, text=complexity[3]).grid(row=row, column=4, padx=10, pady=5)
         row += 1
    
-# bar graph for sorting algorithms 
-
-# Add this function after your display_performance_results function
+# Bar graph for sorting algorithms 
 def show_performance_bar_graph():
     try:
         # Get test data parameters
@@ -425,79 +466,46 @@ def show_performance_bar_graph():
     except Exception as e:
         messagebox.showerror("Analysis Error", f"An error occurred generating bar graph: {e}")
 
+# Function to toggle pause/resume of animation
+def toggle_pause_resume():
+    global is_paused, current_animation
+    if current_animation:
+        is_paused = not is_paused
+        if is_paused:
+            current_animation.event_source.stop()
+            pause_button.config(text="Resume")
+        else:
+            current_animation.event_source.start()
+            pause_button.config(text="Pause")
+
+# Function to reset the visualization
+def reset_visualization():
+    global current_animation, arrays, original_arrays, current_frame, is_paused
     
-    perf_window = tk.Toplevel(root)
-    perf_window.title("Algorithm Performance Analysis")
-    perf_window.geometry("900x700")
+    # Stop the current animation
+    if current_animation:
+        current_animation.event_source.stop()
     
-    # Create a notebook with tabs
-    notebook = ttk.Notebook(perf_window)
-    notebook.pack(fill='both', expand=True, padx=10, pady=10)
+    # Reset to original state
+    if original_arrays:
+        arrays = [arr.copy() for arr in original_arrays]
+        
+        # Redraw the initial state
+        ax.clear()
+        ax.bar(range(len(arrays[0])), arrays[0], color="blue")
+        canvas.draw()
     
-    # Runtime tab
-    runtime_tab = ttk.Frame(notebook)
-    notebook.add(runtime_tab, text="Runtime Analysis")
-    
-    # Create runtime chart
-    runtime_fig, runtime_ax = plt.subplots(figsize=(8, 5))
-    
-    # Plot runtime for each algorithm
-    for alg_name, runtimes in sort_results.items():
-        runtime_ax.plot(sizes, runtimes, marker='o', label=alg_name)
-    
-    runtime_ax.set_xlabel('Array Size')
-    runtime_ax.set_ylabel('Runtime (seconds)')
-    runtime_ax.set_title('Algorithm Runtime Comparison')
-    runtime_ax.legend()
-    runtime_ax.grid(True)
-    
-    # Log scale for better visibility of differences
-    runtime_ax.set_xscale('log')
-    runtime_ax.set_yscale('log')
-    
-    runtime_canvas = FigureCanvasTkAgg(runtime_fig, master=runtime_tab)
-    runtime_canvas.get_tk_widget().pack(fill='both', expand=True)
-    
-    # Theoretical complexity tab
-    complexity_tab = ttk.Frame(notebook)
-    notebook.add(complexity_tab, text="Theoretical Complexity")
-    
-    # Create a table for theoretical complexities
-    complexity_frame = ttk.Frame(complexity_tab)
-    complexity_frame.pack(fill='both', expand=True, padx=20, pady=20)
-    
-    # Headers
-    ttk.Label(complexity_frame, text="Algorithm", font=('Arial', 12, 'bold')).grid(row=0, column=0, padx=10, pady=5)
-    ttk.Label(complexity_frame, text="Best Case", font=('Arial', 12, 'bold')).grid(row=0, column=1, padx=10, pady=5)
-    ttk.Label(complexity_frame, text="Average Case", font=('Arial', 12, 'bold')).grid(row=0, column=2, padx=10, pady=5)
-    ttk.Label(complexity_frame, text="Worst Case", font=('Arial', 12, 'bold')).grid(row=0, column=3, padx=10, pady=5)
-    ttk.Label(complexity_frame, text="Space", font=('Arial', 12, 'bold')).grid(row=0, column=4, padx=10, pady=5)
-    
-    # Algorithm complexities
-    complexities = {
-        "Bubble Sort": ["O(n)", "O(n²)", "O(n²)", "O(1)"],
-        "Insertion Sort": ["O(n)", "O(n²)", "O(n²)", "O(1)"],
-        "Selection Sort": ["O(n²)", "O(n²)", "O(n²)", "O(1)"],
-        "Merge Sort": ["O(n log n)", "O(n log n)", "O(n log n)", "O(n)"],
-        "Quick Sort": ["O(n log n)", "O(n log n)", "O(n²)", "O(log n)"],
-        "Radix Sort": ["O(nk)", "O(nk)", "O(nk)", "O(n+k)"],
-    }
-    
-    # Fill the table
-    row = 1
-    for alg_name, complexity in complexities.items():
-        ttk.Label(complexity_frame, text=alg_name).grid(row=row, column=0, padx=10, pady=5)
-        ttk.Label(complexity_frame, text=complexity[0]).grid(row=row, column=1, padx=10, pady=5)
-        ttk.Label(complexity_frame, text=complexity[1]).grid(row=row, column=2, padx=10, pady=5)
-        ttk.Label(complexity_frame, text=complexity[2]).grid(row=row, column=3, padx=10, pady=5)
-        ttk.Label(complexity_frame, text=complexity[3]).grid(row=row, column=4, padx=10, pady=5)
-        row += 1
+    # Reset controls
+    current_frame = 0
+    is_paused = False
+    pause_button.config(text="Pause", state="disabled")
+    reset_button.config(state="disabled")
+    progress_label.config(text="Step 0/0")
 
 # Function to handle window closing
 def on_closing():
     root.quit()
     root.destroy()
-
 
 # Initialize Tkinter
 root = tk.Tk()
@@ -543,6 +551,7 @@ tk.Button(frame_randomizer, text="Auto-Generate List", command=generate_list).pa
 frame_data = tk.LabelFrame(root, text="Unsorted Data", padx=10, pady=10)
 frame_data.pack(pady=10, fill="x", padx=20)
 array_display = tk.Entry(frame_data, width=60)
+array_display.pack(pady=5, padx=10)
 all_arrays_display = tk.Text(frame_data, height=10, width=60)
 all_arrays_display.pack(pady=5, padx=10)
 
@@ -574,8 +583,30 @@ tk.Label(frame_search, text="Search Value").pack(side="left")
 search_entry = tk.Entry(frame_search, width=10)
 search_entry.pack(side="left", padx=5)
 
-# Button to execute the selected algorithm
-tk.Button(root, text="Execute Algorithm", command=animate_sorting, font=("Arial", 12, "bold")).pack(pady=20)
+# Control frame with buttons
+control_frame = tk.Frame(root)
+control_frame.pack(pady=10)
+
+# Execute button
+execute_button = tk.Button(control_frame, text="Execute", command=animate_sorting, 
+                          font=("Arial", 12, "bold"))
+execute_button.grid(row=0, column=0, padx=5)
+
+# Pause/Resume button
+pause_button = tk.Button(control_frame, text="Pause", command=toggle_pause_resume, 
+                        font=("Arial", 12, "bold"), 
+                        state="disabled")
+pause_button.grid(row=0, column=1, padx=5)
+
+# Reset button
+reset_button = tk.Button(control_frame, text="Reset", command=reset_visualization, 
+                        font=("Arial", 12, "bold"), 
+                        state="disabled")
+reset_button.grid(row=0, column=2, padx=5)
+
+# Progress label
+progress_label = tk.Label(control_frame, text="Step 0/0", font=("Arial", 10))
+progress_label.grid(row=0, column=3, padx=20)
 
 # Button to analyze performance
 performance_button = tk.Button(root, text="Analyze Algorithm", 
@@ -583,11 +614,12 @@ performance_button = tk.Button(root, text="Analyze Algorithm",
                               font=("Arial", 12))
 performance_button.pack(pady=10)
 
-# button for bar graph visualization 
-bar_graph_button = tk.Button(root, text="Show Performance Bar Graph", 
-                            command=show_performance_bar_graph,
-                            font=("Arial", 12))
-bar_graph_button.pack(pady=10)
+# Button for bar graph visualization 
+bar_button = tk.Button(root, text="Show Bar Graph", 
+                       command=show_performance_bar_graph,
+                       font=("Arial", 12))
+bar_button.pack(pady=10)
+
 # Sorting Visualization frame
 frame_visual = tk.LabelFrame(root, text="Sorting Visualization of Array 1", padx=10, pady=10)
 frame_visual.pack(pady=10, fill="both", expand=True, padx=20)
