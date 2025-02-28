@@ -180,7 +180,7 @@ def animate_sorting():
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
-# function to test performance analysis 
+# Function to test performance analysis 
 def analyze_performance():
     try:
         # Get test data parameters
