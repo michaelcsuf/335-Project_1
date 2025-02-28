@@ -6,6 +6,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import ast  # For safe evaluation of string to list
 from sorting_algorithms import *  # Import sorting functions
 from animations import *  # Import animation functions
+import time  # Import time module
 
 # Initialize Tkinter
 root = tk.Tk()
@@ -148,6 +149,9 @@ def animate_sorting():
         # Capture the initial state of the array
         capture_step(array)
 
+        # Measure the time taken by the sorting algorithm
+        start_time = time.time()
+        
         # Call the corresponding animation function
         sorting_map = {
             "Bubble Sort": bubble_sort_anim,
@@ -164,6 +168,9 @@ def animate_sorting():
             messagebox.showerror("Sorting Error", "Animation not available for this algorithm.")
             return
 
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
         # Set up the bar chart
         ax.clear()
         bars = ax.bar(range(len(array)), array, color="blue")
@@ -174,6 +181,9 @@ def animate_sorting():
 
         anim = FuncAnimation(fig, update, frames=len(sorting_steps), interval=100, repeat=False)
         canvas.draw()
+
+        # Display the time complexity
+        messagebox.showinfo("Time Complexity", f"Time taken by {algorithm_name}: {elapsed_time:.4f} seconds")
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
