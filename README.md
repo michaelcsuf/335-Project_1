@@ -23,7 +23,7 @@ Implement five sorting algorithms in Python:
 
 # Project Setup
 ## Install packages
-- pip tkinter
+- pip install tkinter
 - pip install matplotlib
 ## To Run
 - Press play button on vscode or python GUI.py in the terminal
